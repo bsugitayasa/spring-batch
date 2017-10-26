@@ -1,14 +1,14 @@
-# Spring Cache #
+# Spring Batch #
 
 Roadmap
 
-* Overview Spring Cache
+* Overview Spring Batch
 * Build from scratch
 * Live Demo
 
-## Cache in Spring ##
+## Batch in Spring ##
 
-### Cache Abstraction ? ###
+### Batch Abstraction ? ###
 
 * Kumpulan duplikasi data yang disimpan pada suatu media
 * Data original dari duplikasi memiliki akses yang mahal
@@ -22,7 +22,7 @@ Roadmap
 
 `Goal : Improve the performance of your system`
 
-### Enable Caching ###
+### Enable Batch ###
 
 * Simply adding the ```@EnableCaching```
 
