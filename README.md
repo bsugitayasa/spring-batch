@@ -158,7 +158,7 @@ Roadmap
     ```
     mvn clean spring-boot:run
     ```
-    Cek pada database, tabel Peserta dan entity batch persistance dengan prefix BATCH_ otomatis akan terbentuk
+    Cek pada database, tabel Peserta dan entity batch persistance dengan prefix BATCH_*** otomatis akan terbentuk
 
 4. Membuat contoh file *.csv dengan menggunakan delimiter `,` pada classpath project `src/main/resource` misal dengan nama `test-data.csv` dengan beberapa content sebagai berikut:
 
@@ -178,8 +178,9 @@ Roadmap
     }
     ```
 
-6. Menyiapkan konfigurasi class untuk menjalankan batch proses membaca file csv dan disimpan kedalam database. Dalam batch konfigurasi terdapat 3 hal yang yang perlu diperhatikan. 
-    * Membuat class konfigurasi dengan beberapa instance yang diperlukan
+6. Menyiapkan konfigurasi class untuk menjalankan batch proses membaca file csv dan disimpan kedalam database. 
+
+    6.1 Membuat class konfigurasi dengan beberapa instance yang diperlukan
     
     ```
     @Configuration
@@ -190,7 +191,7 @@ Roadmap
     }
     ```
 
-    * Menyiapkan ItemReader yang bertugas untuk membaca file csv dan melakukan mapping terhadap object entity `Peserta` didalam class konfigurasi. Untuk kebutuhan demo diperlukan ItemReader yang bertugas membaca file maka telah disediakan oleh spring `FlatFileItemReader`
+    6.2 Menyiapkan ItemReader yang bertugas untuk membaca file csv dan melakukan mapping terhadap object entity `Peserta` didalam class konfigurasi. Untuk kebutuhan demo diperlukan ItemReader yang bertugas membaca file maka telah disediakan oleh spring `FlatFileItemReader`
     
     ```
     @Bean
@@ -212,7 +213,7 @@ Roadmap
 	}
     ```
     
-    * Setelah menyiapkan ItemReader, langkah selanjutnya menyiapkan komponen ItemProcessor dengan implement `org.springframework.batch.item.ItemProcessor`. Contoh ItemProcessor pada demo berikut melakukan proses logic untuk merubah nama peserta menjadi UpperCase
+    6.3 Setelah menyiapkan ItemReader, langkah selanjutnya menyiapkan komponen ItemProcessor dengan implement `org.springframework.batch.item.ItemProcessor`. Contoh ItemProcessor pada demo berikut melakukan proses logic untuk merubah nama peserta menjadi UpperCase
     
     ```
     @Component
@@ -230,7 +231,7 @@ Roadmap
     }
     ```
 
-    * Langkah selanjutnya adalah menyiapkan komponent ItemWriter untuk menyimpan data hasil ItemReader & ItemProcessor dengan implement `org.springframework.batch.item.ItemWriter`
+    6.4 Langkah selanjutnya adalah menyiapkan komponent ItemWriter untuk menyimpan data hasil ItemReader & ItemProcessor dengan implement `org.springframework.batch.item.ItemWriter`
     
     ```
     @Component
@@ -252,14 +253,14 @@ Roadmap
     }
     ```
     
-    * Tambahkan pada class konfigurasi `PesertaBatchConfig` instance dari ItemProcessor dan ItemWriter
+    6.5 Tambahkan pada class konfigurasi `PesertaBatchConfig` instance dari ItemProcessor dan ItemWriter
     
     ```
     @Autowired public PesertaItemProcessor processor;
 	@Autowired public PesertaItemWriter itemWriter;
     ```
     
-    * Waktunya menambahkan Step baru untuk membungkus proses read (FlatFileItemReader), process (ItemProcess) & write (ItemWriter) yang telah dibuat sebelumnya pada class konfigurasi
+    6.6 Waktunya menambahkan Step baru untuk membungkus proses read (FlatFileItemReader), process (ItemProcess) & write (ItemWriter) yang telah dibuat sebelumnya pada class konfigurasi
     
     ```
     @Bean
@@ -273,4 +274,4 @@ Roadmap
 	}
     ```
     
-    * Jalankan aplikasi melalui perintah berikut `mvn spring-boot:run`
+    6.7 Jalankan aplikasi melalui perintah berikut `mvn spring-boot:run`
