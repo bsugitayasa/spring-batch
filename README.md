@@ -213,6 +213,24 @@ Roadmap
 	}
     ```
     
+    Untuk mapping dari file ke object entity `Peserta` diperlukan metode khusus dengan implement `org.springframework.batch.item.file.mapping.FieldSetMapper`
+    
+    ```
+    @Component
+    public class PesertaMapper implements FieldSetMapper<Peserta>{
+
+        @Override
+        public Peserta mapFieldSet(FieldSet fs) throws BindException {
+            Peserta peserta = new Peserta();
+            peserta.setName(fs.readRawString(0));
+            peserta.setAlamat(fs.readString("alamat"));
+            peserta.setTanggalLahir(fs.readDate(2));
+
+            return peserta;
+        }
+    }
+    ```
+    
     6.3 Setelah menyiapkan ItemReader, langkah selanjutnya menyiapkan komponen ItemProcessor dengan implement `org.springframework.batch.item.ItemProcessor`. Contoh ItemProcessor pada demo berikut melakukan proses logic untuk merubah nama peserta menjadi UpperCase
     
     ```
