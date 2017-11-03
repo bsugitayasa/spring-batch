@@ -8,19 +8,33 @@ Roadmap
 
 ## Batch in Spring ##
 
-### Batch Abstraction ? ###
+### Overview Spring Batch ###
 
-* Kumpulan duplikasi data yang disimpan pada suatu media
-* Data original dari duplikasi memiliki akses yang mahal
-    * waktu
-    * resource processor
-* Arsitektur sederhana
+* Spring Batch merupakan framework yang mengakomudasi proses secara batch, dengan mengeksekusi serangkaian `job`
+* Job terdiri dari serangkaian step
+* Step terdiri dari proses
+    * Read
+    * Process
+    * Write
+* Step juga dapat terdiri dari single operation atau istilah dalam spring batch disebut `Tasklet`
+* Workflow dasar spring batch sebagai berikut
 
-![Arsitektur](img/cache-diagram.jpg)
+![workflow-spring-batch](img/batch-diagram.jpg)
 
-* Spring Framework telah menyediakan cara untuk melakukan cache pada Spring Application existing
+* Beberapa istilah yang sering digunakan dalam spring batch
+1. Job : mendeskripsikan sebuah pekerjaan, misal nya membaca file *.csv dan kemudian menyimpan ke dalam database. Sebuah Job juga merupakan container dari satu atau beberapa kumpulan Step
+2. Step : merupakan bagian independent yang mengandung semua informasi terkait kontrol dari proses batch. Sebuah Job terdiri dari satu atau lebih Step, misalnya Step 1 untuk membaca file *.csv dan Step 2 adalah untuk mapping nilai file kedalam database
+3. JobInstance : sebuah instance yang sedang berjalan dari sebuah Job yang telah ditetapkan dalam konfigurasi. Contoh Job untuk membaca file, artinya kita memiliki 1 JobInstance dengan kata lain 1 Job yang sedang berjalan sama dengan 1 JobInstance
+4. JobParameters : sekumpulan parameter yang digunakan oleh JobInstance
+5. JobExecution : merupakan hasil dari menjalankan setiap JobInstance. Misal dalam membaca file *.csv, Job pertama mengalami kegagalan sedangkan berhasil setelah Job dijalankan ulang. Maka kita akan mempunyai 1 JobInstance dan memiliki 2 JobExecution (1 yang gagal, 1 yang berhasil)
+6. StepExecution : memiliki arti yang sama layaknya JobExecution namun lebih mempresentasikan hasil dari sebuah Step
+7. JobRepository : sebuah persistent store untuk menyimpan semua informasi meta-data sebuah Job. Repository diperlukan untuk mengetahui state dari sebuah Job, apakah mengalami kegagalan atau tidak dalam proses nya. Secara default informasi disimpan pada memory, namun dapat diseting untuk disimpan dalam database
+8. JobLauncher : object yang memungkinkan kita untuk memulai sebuah Job menggunakan JobRepository untuk mendapatkan JobExecution yang valid
+9. Tasklet : situasi dimana kita tidak memiliki input dan pengolahan dari output, misalnya ingin menjalankan/memanggil sebuah store procedure
+10. ItemReader : sebuah abstract class yang digunakan untuk menggambarkan sebuah object yang memungkinkan kita untuk membaca sebuah object yang ingin diproses, misalnya membaca file atau membaca data dari database
+11. ItemProcessor : sebuah abstract class yang digunakan untuk menghandel bisnis logic dati data yang dihasilkan oleh ItemReader sebelum dilempar ke ItemWriter
+12. ItemWriter : sebuah abstract class yang digunakan untuk menulis hasil akhir dari proses batch
 
-`Goal : Improve the performance of your system`
 
 ### Enable Batch ###
 
