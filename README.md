@@ -178,7 +178,7 @@ Roadmap
     }
     ```
 
-6. Menyiapkan konfigurasi class untuk menjalankan batch proses membaca file csv dan disimpan kedalam database. 
+6. Menyiapkan konfigurasi class untuk menjalankan batch proses membaca file csv dan disimpan kedalam database 
 
     6.1 Membuat class konfigurasi dengan beberapa instance yang diperlukan
     
@@ -191,7 +191,7 @@ Roadmap
     }
     ```
 
-    6.2 Menyiapkan ItemReader yang bertugas untuk membaca file csv dan melakukan mapping terhadap object entity `Peserta` didalam class konfigurasi. Untuk kebutuhan demo diperlukan ItemReader yang bertugas membaca file maka telah disediakan oleh spring `FlatFileItemReader`
+    6.2 Menyiapkan ItemReader yang bertugas untuk membaca file csv dan melakukan mapping terhadap object entity `Peserta` di dalam class konfigurasi. Untuk kebutuhan demo diperlukan ItemReader yang bertugas membaca file maka telah disediakan oleh spring `FlatFileItemReader`
     
     ```
     @Bean
@@ -243,7 +243,6 @@ Roadmap
 
         @Override
         public void write(List<? extends Peserta> list) throws Exception {
-            LOG.info("#Job Param {}",jobId);
             for(Peserta p : list) {
                 
                 LOG.info("PESERTA YANG AKAN DI SAVE : {}",p.getName());
@@ -260,7 +259,7 @@ Roadmap
 	@Autowired public PesertaItemWriter itemWriter;
     ```
     
-    6.6 Waktunya menambahkan Step baru untuk membungkus proses read (FlatFileItemReader), process (ItemProcess) & write (ItemWriter) yang telah dibuat sebelumnya pada class konfigurasi
+    6.6 Tambahkan Step untuk membungkus proses read (FlatFileItemReader), process (ItemProcess) & write (ItemWriter) yang telah dibuat sebelumnya pada class konfigurasi
     
     ```
     @Bean
@@ -274,4 +273,78 @@ Roadmap
 	}
     ```
     
-    6.7 Jalankan aplikasi melalui perintah berikut `mvn spring-boot:run`
+    6.7 Setelah step ditambahkan, waktunya membuat sebuah Job pada class konfigurasi
+    
+    ```
+    @Bean
+	public Job importDataPesertaJob() {
+		return jobBuilderFactory
+				.get("importPesertaJob")
+				.incrementer(new RunIdIncrementer())
+				.flow(importPesertaStep())
+				.end()
+				.build();
+	}
+    ```
+    
+    6.8 Jalankan aplikasi melalui perintah berikut 
+    
+    ```mvn spring-boot:run```
+    
+
+### Control JobExecution & JobLauncher ###
+
+Pada sesi sebelumnya, job batch akan otomatis start setiap kali menjalankan aplikasi. Untuk kontrol kapan job akan dikerjakan atau dengan kata lain dipanggil via REST maka dilakukan beberapa langkah berikut:
+
+1. Tambahkan pada file `application.properties`, set `false` enable batch job (nilai default adalah `true`)
+
+    ```
+    spring.batch.job.enabled=false
+    ```
+    
+    Tujuannya adalah membuat job menjadi lazy start
+    
+2. Expose REST via controller class
+
+    ```
+    @RestController
+    @RequestMapping("/peserta/process")
+    public class PesertaController {
+        @Autowired private JobLauncher jobLauncher;
+        @Autowired @Qualifier("importDataPesertaJob") private Job importDataPesertaJob;
+
+        @GetMapping("/import")
+        public String executeJob() throws JobExecutionAlreadyRunningException, JobRestartException,
+                JobInstanceAlreadyCompleteException, JobParametersInvalidException {
+            String status = "";
+            try {
+                JobExecution execution = jobLauncher.run(importDataPesertaJob, new JobParametersBuilder()
+                        .addString("JobId", String.valueOf(System.currentTimeMillis()))
+                        .toJobParameters());
+                @SuppressWarnings("unused")
+                Boolean isFailed = Boolean.FALSE;
+                if (BatchStatus.FAILED.equals(execution.getStatus())) {
+                    isFailed = Boolean.TRUE;
+                    status = "FAILED!!!";
+                } else {
+                    status = "SUCCESS!!";
+                }
+            } catch (Exception e) {
+                status = "ERROR LAUNCH importDataPesertaJob : " + e.getMessage();
+            }
+            return status;
+        }
+    }
+    ```
+    
+3. Jalankan aplikasi dan coba panggil via rest client untuk menjalankan Job `importDataPesertaJob`
+    
+    ```
+    mvn spring-boot:run
+    ```
+    
+    Panggil via rest dengan url path `localhost:8080/peserta/process/import`
+    
+
+### Improvisasi . . . ###
+
