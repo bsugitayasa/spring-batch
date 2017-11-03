@@ -37,22 +37,11 @@ Roadmap
 12. ItemWriter : sebuah abstract class yang digunakan untuk menulis hasil akhir dari proses batch
 
 
-### Enable Batch ###
-
-* Simply adding the ```@EnableCaching```
-
-### Caching With Annotations ###
-
-* ```@Cacheable```
-* ```@CachePut```
-* ```@CacheEvict```
-* ```@CacheConfig```
-
 ## Build dan Run ##
 
 ### Persiapan Database ###
 
-* Buat database baru pada MySQL (misal : spring_cahce_demo)
+* Buat database baru pada MySQL (misal : spring_batch_demo)
 
 
 ### Spring Boot Initializr ###
@@ -64,19 +53,19 @@ Roadmap
     Group
     
     ```
-    com.sheringsession.balicamp.springcache    
+    com.sheringsession.balicamp   
     ```
 
     Artifact
     
     ```
-    demo
+    spring-batch
     ```
    
     Dependencies
     
     ```
-    Web, JPA, Cache, MySQL (Optional tergantung DB yang digunakan)
+    Web, Batch, Lombok, JPA, MySQL (Optional tergantung DB yang digunakan)
     ```
    
 3. Generate Project
@@ -89,144 +78,199 @@ Roadmap
 1. Pastikan `pom.xml` terdapat dependency berikut
     
     ```
-    <dependencies>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-cache</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-web</artifactId>
-		</dependency>
-        <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId> 
-			<scope>runtime</scope> 
-        </dependency>
-    </dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-batch</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <dependency>
+        <groupId>mysql</groupId>
+        <artifactId>mysql-connector-java</artifactId>
+        <scope>runtime</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <optional>true</optional>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-test</artifactId>
+        <scope>test</scope>
+    </dependency>
     ```
 
 2. `applicatioin.properties` untuk konfigurasi database source, hibernate dll
 
     ```
-    spring.datasource.url=jdbc:mysql://localhost/spring_cahce_demo
-    spring.datasource.username=disesuaikan
-    spring.datasource.password=disesuaikan
+    # Setting datasource mysql
+    spring.datasource.url=jdbc:mysql://localhost/spring_batch_demo
+    spring.datasource.username=root
+    spring.datasource.password=******
     spring.datasource.driver-class-name=com.mysql.jdbc.Driver
-    
+
+    # Hibernate properties
     spring.jpa.hibernate.ddl-auto=update
     spring.jpa.show-sql=true
     spring.jpa.properties.hibernate.format_sql=true
-    
-    spring.datasource.max-wait=40000
-    spring.datasource.test-on-borrow=true
-    spring.datasource.validation-query=SELECT 1
-    
-    spring.jackson.serialization.indent-output=true
     ```
 
 
 ### Build with your IDE ###
 
-1. Buat Enity misal Product
+1. Pastikan main class spring application telah menggunakan annotation `@EnableBatchProcessing`
 
     ```
-    @SuppressWarnings("serial")
-    @Data @Entity @Table
-    public class Product implements Serializable{
-        @Id @GeneratedValue(generator="uuid") @GenericGenerator(name="uuid", strategy= "uuid2")
-        private String id;
-        private String code;
-        private String name;
-        private BigDecimal amount;
-        private Boolean outOfStock;
+    @SpringBootApplication
+    @EnableBatchProcessing
+    public class SpringbatchDemoApplication {
+
+        public static void main(String[] args) {
+            SpringApplication.run(SpringbatchDemoApplication.class, args);
+        }
     }
     ```
 
-2. Jalankan aplikasi
+2. Buat Entity misal Peserta
+
+    ```
+    @Data @Entity @Table(name="Peserta")
+    public class Peserta {
+        @Id @GeneratedValue(generator="uuid") @GenericGenerator(name="uuid", strategy="uuid2")
+        private String id;
+        private String name;
+        private String alamat;
+        @Temporal(TemporalType.DATE)
+        private Date tanggalLahir;
+    }
+    ```
+
+3. Jalankan aplikasi
 
     ```
     mvn clean spring-boot:run
     ```
-    Cek tabel Product otomatis akan terbentuk dalam database
+    Cek pada database, tabel Peserta dan entity batch persistance dengan prefix BATCH_ otomatis akan terbentuk
 
-3. Buat DAO `ProductDao` 
+4. Membuat contoh file *.csv dengan menggunakan delimiter `,` pada classpath project `src/main/resource` misal dengan nama `test-data.csv` dengan beberapa content sebagai berikut:
 
     ```
-    public interface ProductDao extends PagingAndSortingRepository<Product, String>{
-        public Product findByName(String name);
-        public Product findByCode(String code);
+    Name1, Jl. Alamat 1, 1987-05-01
+    Name2, Jl. Alamat 2, 1988-02-04
+    Name3, Jl. Alamat 3, 1990-03-12
+    Name4, Jl. Alamat 4, 1987-05-07
+    Name5, Jl. Alamat 5, 1991-10-11
+    Name6, Jl. Alamat 6, 1991-01-01
+    ```
+
+5. Menyiapkan DAO class untuk entity `Peserta` untuk keperluan persistent database
+
+    ```
+    public interface PesertaDao extends PagingAndSortingRepository<Peserta, String>{
     }
     ```
 
-4. Buat Service `ProductService`
-
-    ```
-    public class ProductService {
-        private static final Logger LOG = LoggerFactory.getLogger(ProductService.class);
-        @Autowired private ProductDao productDao;
+6. Menyiapkan konfigurasi class untuk menjalankan batch proses membaca file csv dan disimpan kedalam database. Dalam batch konfigurasi terdapat 3 hal yang yang perlu diperhatikan. 
+    * Membuat class konfigurasi dengan beberapa instance yang diperlukan
     
-        public Product findProductByName(String name) {
-            LOG.info("### Call service product by name {}", name);
-            return productDao.findByName(name);
-        }
-        
-        public Product findProductByCode(String code) {
-            LOG.info("### Call service product by code {}", code);
-            return productDao.findByCode(code);
-        }
-        
-        public Product updateProduct(String id, String name) {
-            LOG.info("### Call service put product id {}, name {}", id, name);
-            Product p = productDao.findOne(id);
-            p.setName(name);
-            productDao.save(p);
-            return p;
-        }
-        
-        public void deleteProduct(String name) {
-            LOG.info("### Call service evict product name {}", name);
-        }
+    ```
+    @Configuration
+    public class PesertaBatchConfig {
+        @Autowired public JdbcTemplate jdbcTemplate;
+        @Autowired public JobBuilderFactory jobBuilderFactory;
+        @Autowired public StepBuilderFactory stepBuilderFactory;
     }
     ```
 
-4. Buat Controller `ProductController`
-
+    * Menyiapkan ItemReader yang bertugas untuk membaca file csv dan melakukan mapping terhadap object entity `Peserta` didalam class konfigurasi. Untuk kebutuhan demo diperlukan ItemReader yang bertugas membaca file maka telah disediakan oleh spring `FlatFileItemReader`
+    
     ```
-    @RestController @RequestMapping("/spring-cache/product")
-    public class ProductController {
-        private static final Logger LOG = LoggerFactory.getLogger(ProductController.class);
-        @Autowired private ProductService productService;
+    @Bean
+	public FlatFileItemReader<Peserta> reader() {
+		FlatFileItemReader<Peserta> reader = new FlatFileItemReader<Peserta>();
+		reader.setResource(new ClassPathResource("test-data.csv"));
+		reader.setLineMapper(new DefaultLineMapper<Peserta>() {
+			{
+				setLineTokenizer(new DelimitedLineTokenizer() {
+					{
+						setNames(new String[] { "nama", "alamat", "tanggalLahir" });
+					}
+				});
+				setFieldSetMapper(new PesertaMapper());
+			}
+		});
 
-        @GetMapping("/getByName/{name}")
-        public Product getDataProductByName(@PathVariable String name) {
-            LOG.info("## product controller getByName called here!!");
-            return productService.findProductByName(name);
-        }
-
-        @GetMapping("/getByCode/{code}")
-        public Product getDataProductByCode(@PathVariable String code) {
-            LOG.info("## product controller getByCode called here!!");
-            return productService.findProductByCode(code);
-        }
-
-        @GetMapping("/updateProduct/{id}/{name}")
-        public Product updateDataProduct(@PathVariable String id, @PathVariable String name) {
-            LOG.info("## product controller put product called here!!");
-            return productService.updateProduct(id, name); 
-        }
-
-        @GetMapping("/deleteProduct/name/{name}")
-        public String deleteDataProduct(@PathVariable String name) {
-            LOG.info("## product controller delete product called here!!");
-            productService.deleteProduct(name);
-            return "Delete Product Cache berhasil !!!";
-        }
-    }
+		return reader;
+	}
     ```
     
-5. Jalankan menggunakan maven dan browse ke [http://localhost:8080/]
+    * Setelah menyiapkan ItemReader, langkah selanjutnya menyiapkan komponen ItemProcessor dengan implement `org.springframework.batch.item.ItemProcessor`. Contoh ItemProcessor pada demo berikut melakukan proses logic untuk merubah nama peserta menjadi UpperCase
+    
+    ```
+    @Component
+    public class PesertaItemProcessor implements ItemProcessor<Peserta, Peserta>{
+        @Override
+        public Peserta process(Peserta peserta) throws Exception {
+            String nama = peserta.getName().toUpperCase();
+            Peserta newPeserta = new Peserta();
+            newPeserta.setName(nama);
+            newPeserta.setAlamat(peserta.getAlamat());
+            newPeserta.setTanggalLahir(peserta.getTanggalLahir());
+
+            return newPeserta;
+        }
+    }
+    ```
+
+    * Langkah selanjutnya adalah menyiapkan komponent ItemWriter untuk menyimpan data hasil ItemReader & ItemProcessor dengan implement `org.springframework.batch.item.ItemWriter`
+    
+    ```
+    @Component
+    public class PesertaItemWriter implements ItemWriter<Peserta> {
+
+        private static final Logger LOG = LoggerFactory.getLogger(PesertaItemWriter.class);
+
+        @Autowired private PesertaDao pesertaDao;
+
+        @Override
+        public void write(List<? extends Peserta> list) throws Exception {
+            LOG.info("#Job Param {}",jobId);
+            for(Peserta p : list) {
+                
+                LOG.info("PESERTA YANG AKAN DI SAVE : {}",p.getName());
+                pesertaDao.save(p);
+            }
+        }
+    }
+    ```
+    
+    * Tambahkan pada class konfigurasi `PesertaBatchConfig` instance dari ItemProcessor dan ItemWriter
+    
+    ```
+    @Autowired public PesertaItemProcessor processor;
+	@Autowired public PesertaItemWriter itemWriter;
+    ```
+    
+    * Waktunya menambahkan Step baru untuk membungkus proses read (FlatFileItemReader), process (ItemProcess) & write (ItemWriter) yang telah dibuat sebelumnya pada class konfigurasi
+    
+    ```
+    @Bean
+	public Step importPesertaStep() {
+		return stepBuilderFactory.get("step-1")
+				.<Peserta, Peserta>chunk(2)
+				.reader(reader())
+				.processor(processor)
+				.writer(itemWriter)
+				.build();
+	}
+    ```
+    
+    * Jalankan aplikasi melalui perintah berikut `mvn spring-boot:run`
