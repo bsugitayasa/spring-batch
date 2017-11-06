@@ -375,9 +375,7 @@ Pada sesi sebelumnya, telah diimplementasi penggunaan `Step` dan `Job` yang ekse
 ### Fault Tolerant ###
 
 Fault Tolerant biasanya digunakan dalam kondisi suatu proses mengalami kegagalan pada bagian tertentu, sehingga diperlukan mekanisme untuk melanjutkan proses sampai suatu job dinyatakan complete (dengan status COMPLETE atau FAILED). Kegagalan proses dapat diakibatkan oleh beberapa case tertentu, diantaranya format file yang gagal termapping, gagal menyimpan ke database ataupun berdasarkan Exception Class tertentu.
-Untuk mengakomudasinya, dapat diimplementasi `.faultTolerant()` pada deklarasi Step. Dengan implementasi faultTolerant, terdapat 2 proses yang biasanya secara tipical mengikuti faultTolerent yaitu `skip` dan `retry`.
-
-Implementasi dapat dilakukan dengan menambahkan beberapa code berikut pada initialisasi Step
+Untuk mengakomudasinya, dapat diimplementasi `.faultTolerant()` pada deklarasi Step. Dengan implementasi faultTolerant, terdapat 2 proses yang biasanya secara tipical mengikuti faultTolerent yaitu `skip` dan `retry`. Implementasi dapat dilakukan dengan menambahkan beberapa code berikut pada initialisasi Step
 
     ```
     @Bean
@@ -400,6 +398,7 @@ Implementasi dapat dilakukan dengan menambahkan beberapa code berikut pada initi
 ### Listener ###
 
 Listener class biasanya digunakan untuk menghandel proses skip & retry dalam faultTolerant dan untuk keperluan interceptor proses tertentu. Pada contoh berikut, listener digunakan untuk modifikasi exit status pada BATCH_STEP_EXECUTION.
+
 
     ```
     @Component
@@ -445,6 +444,7 @@ Penambahan Listener diimplementasi pada inisiasi Step
 				.build();
 	}
     ```
+    
 
 ### Tasklet ####
 
@@ -498,6 +498,7 @@ Tasklet dalam implementasi kedalam sebuah StepBuilderFactory dapat dilihat pada 
 				.build();
 	}
     ```
+
 
 ### Paralel Step ###
 
