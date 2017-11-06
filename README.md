@@ -310,7 +310,7 @@ Roadmap
     ```mvn spring-boot:run```
     
 
-### Control JobExecution & JobLauncher ###
+### Kontrol JobExecution & JobLauncher ###
 
 Pada sesi sebelumnya, job batch akan otomatis start setiap kali menjalankan aplikasi. Untuk kontrol kapan job akan dikerjakan atau dengan kata lain dipanggil via REST maka dilakukan beberapa langkah berikut:
 
@@ -364,5 +364,24 @@ Pada sesi sebelumnya, job batch akan otomatis start setiap kali menjalankan apli
     Panggil via rest dengan url path `localhost:8080/peserta/process/import`
     
 
-### Improvisasi . . . ###
+## Fault Tolerant, Listener & Paralel Step ##
 
+Pada sesi sebelumnya, telah diimplementasi penggunaan `Step` dan `Job` yang eksekusinya dijalankan secara sequensial dan dalam contoh normal case (tidak terdapat error/exception tertentu). Improvisasi pada spring batch dilakukan dalam beberapa case tertentu, diantaranya:
+
+* Jika terdapat kesalahan dalam format file yang gagal terbaca pada spring batch atau berdasarkan Exception Class tertentu
+* Custom exit status pada BATCH_STEP_EXECUTION
+* Step dijalankan secara paralel pada satu Job
+
+### Fault Tolerant ###
+
+Fault Tolerant biasanya digunakan dalam kondisi suatu proses mengalami kegagalan pada bagian tertentu, sehingga diperlukan mekanisme untuk melanjutkan proses sampai suatu job dinyatakan complete (dengan status COMPLETE atau FAILED). Kegagalan proses dapat diakibatkan oleh beberapa case tertentu, diantaranya format file yang gagal termapping, gagal menyimpan ke database ataupun berdasarkan Exception Class tertentu.
+Untuk mengakomudasinya, dapat diimplementasi `.faultTolerant()` pada deklarasi Step. Dengan implementasi faultTolerant, terdapat 2 proses yang biasanya secara tipical mengikuti faultTolerent : 
+
+* skip
+* retry
+
+
+
+### Listener ###
+
+### Paralel Step ###
