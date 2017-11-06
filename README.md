@@ -400,7 +400,7 @@ Untuk mengakomudasinya, dapat diimplementasi `.faultTolerant()` pada deklarasi S
 Listener class biasanya digunakan untuk menghandel proses skip & retry dalam faultTolerant dan untuk keperluan interceptor proses tertentu. Pada contoh berikut, listener digunakan untuk modifikasi exit status pada BATCH_STEP_EXECUTION.
 
 
-    ```
+    
     @Component
     public class SkipChekingListener extends StepExecutionListenerSupport{
 
@@ -414,7 +414,7 @@ Listener class biasanya digunakan untuk menghandel proses skip & retry dalam fau
             }
         }
     }
-    ```
+    
     
 Penambahan Listener diimplementasi pada inisiasi Step
 
@@ -490,21 +490,21 @@ Tasklet merupakan single proses yang tidak memerlukan reader, processor maupun w
 
 Tasklet dalam implementasi kedalam sebuah StepBuilderFactory dapat dilihat pada contoh berikut
 
-    ```
+    
     @Bean
 	public Step sampleStep() {
 		return stepBuilderFactory.get("step-4")
 				.tasklet(new SampleTasklet())
 				.build();
 	}
-    ```
+    
 
 
 ### Paralel Step ###
 
 Step pada suatu Job dapat di jalankan secara sekuensial maupun secara paralel. Untuk menjalankan Step secara paralel, maka pada JobBuilderFactory dibuatkan sebuah `Flow` terlebih dahulu. Untuk penggunaan pada JobBuilderFactory dapat dilihat pada contoh berikut
 
-    ```
+    
     @Bean
 	public Job importDataPesertaJob() {
 		/* Paralel Flow */
@@ -525,20 +525,20 @@ Step pada suatu Job dapat di jalankan secara sekuensial maupun secara paralel. U
 				.end()
 				.build();
     }
-    ```
+    
 
 ### Run dan Testing ###
 
 Untuk mencoba `faultTolerant`, perlu dicoba modifikasi file peserta.csv misal untuk format tanggal lahir dibuat invalid : 
 
-    ```
+    
     Name1, Jl. Alamat 1, 1987-05-01
     Name2, Jl. Alamat 2, 1988-02-04
     Name3, Jl. Alamat 3, 1990-03-12
     Name4, Jl. Alamat 4, 07-05-1987   *format disalahkan*
     Name5, Jl. Alamat 5, 1991-10-11
     Name6, Jl. Alamat 6, 1991-01-01
-    ```
+    
     
 Kemudian jalankan kembali aplikasi dan panggil via rest controler dan pantau log, proses Step berjalan secara paralel dan Job Complete dengan Exit Code `COMPLETE WITH ERROR` 
 
