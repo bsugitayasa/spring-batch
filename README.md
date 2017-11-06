@@ -377,7 +377,7 @@ Pada sesi sebelumnya, telah diimplementasi penggunaan `Step` dan `Job` yang ekse
 Fault Tolerant biasanya digunakan dalam kondisi suatu proses mengalami kegagalan pada bagian tertentu, sehingga diperlukan mekanisme untuk melanjutkan proses sampai suatu job dinyatakan complete (dengan status COMPLETE atau FAILED). Kegagalan proses dapat diakibatkan oleh beberapa case tertentu, diantaranya format file yang gagal termapping, gagal menyimpan ke database ataupun berdasarkan Exception Class tertentu.
 Untuk mengakomudasinya, dapat diimplementasi `.faultTolerant()` pada deklarasi Step. Dengan implementasi faultTolerant, terdapat 2 proses yang biasanya secara tipical mengikuti faultTolerent yaitu `skip` dan `retry`. Implementasi dapat dilakukan dengan menambahkan beberapa code berikut pada initialisasi Step
 
-    ```
+    `
     @Bean
 	public Step importPesertaStep() {
 		return stepBuilderFactory.get("step-1")
@@ -393,7 +393,7 @@ Untuk mengakomudasinya, dapat diimplementasi `.faultTolerant()` pada deklarasi S
                     .retryLimit(3)
 				.build();
 	}
-    ```
+    `
 
 ### Listener ###
 
