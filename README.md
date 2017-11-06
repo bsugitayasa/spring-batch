@@ -366,11 +366,7 @@ Pada sesi sebelumnya, job batch akan otomatis start setiap kali menjalankan apli
 
 ## Fault Tolerant, Listener, Tasklet & Paralel Step ##
 
-Pada sesi sebelumnya, telah diimplementasi penggunaan `Step` dan `Job` yang eksekusinya dijalankan secara sequensial dan dalam contoh normal case (tidak terdapat error/exception tertentu). Improvisasi pada spring batch dilakukan dalam beberapa case tertentu, diantaranya:
-
-* Jika terdapat kesalahan dalam format file yang gagal terbaca pada spring batch atau berdasarkan Exception Class tertentu
-* Custom exit status pada BATCH_STEP_EXECUTION
-* Step dijalankan secara paralel pada satu Job
+Pada sesi sebelumnya, telah diimplementasi penggunaan `Step` dan `Job` yang eksekusinya dijalankan secara sequensial dan dalam contoh normal case (tidak terdapat error/exception tertentu). Pada bagian berikut ini, akan diuraikan penggunaan toleransi kesalahan, penggunaan listener dan bagaimana menjalankan Step secara paralel.
 
 ### Fault Tolerant ###
 
@@ -542,4 +538,5 @@ Untuk mencoba `faultTolerant`, perlu dicoba modifikasi file peserta.csv misal un
     
 Kemudian jalankan kembali aplikasi dan panggil via rest controler dan pantau log, proses Step berjalan secara paralel dan Job Complete dengan Exit Code `COMPLETE WITH ERROR` 
 
-### Selamat Mencoba ###
+
+##  ##
