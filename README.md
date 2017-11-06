@@ -396,34 +396,34 @@ public Step importPesertaStep() {
 
 Listener class biasanya digunakan untuk menghandel proses skip & retry dalam faultTolerant dan untuk keperluan interceptor proses tertentu. Pada contoh berikut, listener digunakan untuk modifikasi exit status pada BATCH_STEP_EXECUTION.
 
+```java
+@Component
+public class SkipChekingListener extends StepExecutionListenerSupport{
 
-    
-    @Component
-    public class SkipChekingListener extends StepExecutionListenerSupport{
-
-        @Override
-        public ExitStatus afterStep(StepExecution stepExecution) {
-            String exitCode = stepExecution.getExitStatus().getExitCode();
-            if(!exitCode.equals(ExitStatus.FAILED.getExitCode()) && stepExecution.getSkipCount() > 0) {
-                return new ExitStatus("COMPLETE WITH ERROR");
-            }else {
-                return null;
-            }
+    @Override
+    public ExitStatus afterStep(StepExecution stepExecution) {
+        String exitCode = stepExecution.getExitStatus().getExitCode();
+        if(!exitCode.equals(ExitStatus.FAILED.getExitCode()) && stepExecution.getSkipCount() > 0) {
+            return new ExitStatus("COMPLETE WITH ERROR");
+        }else {
+            return null;
         }
     }
+}
+```
     
     
 Penambahan Listener diimplementasi pada inisiasi Step
 
 * Autowired Class SkipChekingListener
     
-    ```
+    ```java
     @Autowired public SkipChekingListener skipChekingListener;
     ```
 
 *  Menambahkan listener pada StepBuilderFactory
     
-    ```
+    ```java
     @Bean
 	public Step importPesertaStep() {
 		return stepBuilderFactory.get("step-1")
@@ -448,7 +448,7 @@ Tasklet merupakan single proses yang tidak memerlukan reader, processor maupun w
 
 * Tasklet untuk Delete file 
 
-    ```
+    ```java
     @Component
     public class DeleteFileTasklet implements Tasklet{
 
@@ -470,7 +470,7 @@ Tasklet merupakan single proses yang tidak memerlukan reader, processor maupun w
 
 * Simpel Tasklet 
 
-    ```
+    ```java
     public class SampleTasklet implements Tasklet{
 
         private static final Logger LOG = LoggerFactory.getLogger(SampleTasklet.class);
@@ -486,20 +486,22 @@ Tasklet merupakan single proses yang tidak memerlukan reader, processor maupun w
 
 Tasklet dalam implementasi kedalam sebuah StepBuilderFactory dapat dilihat pada contoh berikut
 
-    
-    @Bean
-	public Step sampleStep() {
-		return stepBuilderFactory.get("step-sample")
-				.tasklet(new SampleTasklet())
-				.build();
-	}
-    
-    @Bean
-	public Step delete() {
-		return stepBuilderFactory.get("step-delete")
-				.tasklet(new DeleteFileTasklet())
-				.build();
-	}
+
+```java
+@Bean
+public Step sampleStep() {
+    return stepBuilderFactory.get("step-sample")
+            .tasklet(new SampleTasklet())
+            .build();
+}
+
+@Bean
+public Step delete() {
+    return stepBuilderFactory.get("step-delete")
+            .tasklet(new DeleteFileTasklet())
+            .build();
+}
+```
 
 
 ### Paralel Step ###
@@ -507,40 +509,42 @@ Tasklet dalam implementasi kedalam sebuah StepBuilderFactory dapat dilihat pada 
 Step pada suatu Job dapat di jalankan secara sekuensial maupun secara paralel. Untuk menjalankan Step secara paralel, maka pada JobBuilderFactory dibuatkan sebuah `Flow` terlebih dahulu. Pada JobBuilderFactory, perlu menambahkan method `split` untuk menjalankan paralel Task. Untuk penggunaan pada JobBuilderFactory dapat dilihat pada contoh berikut
 
     
-    @Bean
-	public Job importDataPesertaJob() {
-		/* Paralel Flow */
-		Flow flow1 = new FlowBuilder<Flow>("subFlow-1")
-				.from(delete())
-				.build();
-		
-		Flow flow2 = new FlowBuilder<Flow>("subFlow-2")
-				.from(sampleStep())
-				.build();
-		
-		return jobBuilderFactory
-				.get("importPesertaJob")
-				.incrementer(new RunIdIncrementer())
-				.flow(importPesertaStep())
-				.split(new SimpleAsyncTaskExecutor())
-				.add(flow1, flow2)
-				.end()
-				.build();
-    }
+```java
+@Bean
+public Job importDataPesertaJob() {
+    /* Paralel Flow */
+    Flow flow1 = new FlowBuilder<Flow>("subFlow-1")
+            .from(delete())
+            .build();
+
+    Flow flow2 = new FlowBuilder<Flow>("subFlow-2")
+            .from(sampleStep())
+            .build();
+
+    return jobBuilderFactory
+            .get("importPesertaJob")
+            .incrementer(new RunIdIncrementer())
+            .flow(importPesertaStep())
+            .split(new SimpleAsyncTaskExecutor())
+            .add(flow1, flow2)
+            .end()
+            .build();
+}
+```
     
 
 ### Run dan Testing ###
 
 Untuk mencoba `faultTolerant`, perlu dicoba modifikasi file peserta.csv misal untuk format tanggal lahir dibuat invalid : 
 
-    
-    Name1, Jl. Alamat 1, 1987-05-01
-    Name2, Jl. Alamat 2, 1988-02-04
-    Name3, Jl. Alamat 3, 1990-03-12
-    Name4, Jl. Alamat 4, 07-05-1987   *format disalahkan*
-    Name5, Jl. Alamat 5, 1991-10-11
-    Name6, Jl. Alamat 6, 1991-01-01
-    
+```csv    
+Name1, Jl. Alamat 1, 1987-05-01
+Name2, Jl. Alamat 2, 1988-02-04
+Name3, Jl. Alamat 3, 1990-03-12
+Name4, Jl. Alamat 4, 07-05-1987   *format disalahkan*
+Name5, Jl. Alamat 5, 1991-10-11
+Name6, Jl. Alamat 6, 1991-01-01
+```    
     
 Kemudian jalankan kembali aplikasi dan panggil via rest controler dan pantau log, proses Step berjalan secara paralel dan Job Complete dengan Exit Code `COMPLETE WITH ERROR` 
 
@@ -548,38 +552,44 @@ Kemudian jalankan kembali aplikasi dan panggil via rest controler dan pantau log
 
 Untuk mengetahui error skip berada pada jumlah proses keberapa, dapat diintercept menggunakan `org.springframework.batch.core.annotation.OnReadError`. Cara sederhananya, membuat satu class baru dan Overide annotation `@OnReadError`.
 
-    @Component
-    public class CustomSkipListener {
+```java
+@Component
+public class CustomSkipListener {
 
-        private static final Logger LOG = LoggerFactory.getLogger(CustomSkipListener.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CustomSkipListener.class);
 
-        @OnReadError
-        public void onReadError(Exception e) {
-            LOG.error("INTERCEPTOR KETIKA ADA YANG ERROR {}", e);
-        }
+    @OnReadError
+    public void onReadError(Exception e) {
+        LOG.error("INTERCEPTOR KETIKA ADA YANG ERROR {}", e);
     }
+}
+```
     
 Pada konfigurasi batch proses ditambahkan listener saat inisiasi Step dengan autowired class CustomSkipListener diatas
 
-    @Autowired public CustomSkipListener customSkipListener;
-    
-    @Bean
-	public Step importPesertaStep() {
-		return stepBuilderFactory.get("step-1")
-				.<Peserta, Peserta>chunk(2)
-				.reader(reader())
-				.processor(processor)
-				.writer(writer)
-				.faultTolerant()
-					.skip(FlatFileParseException.class)
-					.skip(SQLDataException.class)
-					.skipLimit(2)
-					.retry(FlatFileParseException.class)
-					.retryLimit(2)
-				.listener(skipCheckingListener)
-				.listener(customSkipListener)
-				.build();
-	}
+```java
+@Autowired public CustomSkipListener customSkipListener;
+
+. . .
+
+@Bean
+public Step importPesertaStep() {
+    return stepBuilderFactory.get("step-1")
+            .<Peserta, Peserta>chunk(2)
+            .reader(reader())
+            .processor(processor)
+            .writer(writer)
+            .faultTolerant()
+                .skip(FlatFileParseException.class)
+                .skip(SQLDataException.class)
+                .skipLimit(2)
+                .retry(FlatFileParseException.class)
+                .retryLimit(2)
+            .listener(skipCheckingListener)
+            .listener(customSkipListener)
+            .build();
+}
+```
 
 
 ##   ##
