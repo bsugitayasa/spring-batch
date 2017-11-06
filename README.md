@@ -364,7 +364,7 @@ Pada sesi sebelumnya, job batch akan otomatis start setiap kali menjalankan apli
     Panggil via rest dengan url path `localhost:8080/peserta/process/import`
     
 
-## Fault Tolerant, Listener & Paralel Step ##
+## Fault Tolerant, Listener, Tasklet & Paralel Step ##
 
 Pada sesi sebelumnya, telah diimplementasi penggunaan `Step` dan `Job` yang eksekusinya dijalankan secara sequensial dan dalam contoh normal case (tidak terdapat error/exception tertentu). Improvisasi pada spring batch dilakukan dalam beberapa case tertentu, diantaranya:
 
@@ -375,13 +375,170 @@ Pada sesi sebelumnya, telah diimplementasi penggunaan `Step` dan `Job` yang ekse
 ### Fault Tolerant ###
 
 Fault Tolerant biasanya digunakan dalam kondisi suatu proses mengalami kegagalan pada bagian tertentu, sehingga diperlukan mekanisme untuk melanjutkan proses sampai suatu job dinyatakan complete (dengan status COMPLETE atau FAILED). Kegagalan proses dapat diakibatkan oleh beberapa case tertentu, diantaranya format file yang gagal termapping, gagal menyimpan ke database ataupun berdasarkan Exception Class tertentu.
-Untuk mengakomudasinya, dapat diimplementasi `.faultTolerant()` pada deklarasi Step. Dengan implementasi faultTolerant, terdapat 2 proses yang biasanya secara tipical mengikuti faultTolerent : 
+Untuk mengakomudasinya, dapat diimplementasi `.faultTolerant()` pada deklarasi Step. Dengan implementasi faultTolerant, terdapat 2 proses yang biasanya secara tipical mengikuti faultTolerent yaitu `skip` dan `retry`.
 
-* skip
-* retry
+Implementasi dapat dilakukan dengan menambahkan beberapa code berikut pada initialisasi Step
 
-
+    ```
+    @Bean
+	public Step importPesertaStep() {
+		return stepBuilderFactory.get("step-1")
+				.<Peserta, Peserta>chunk(2)
+				.reader(reader())
+				.processor(processor)
+				.writer(writer)
+                .faultTolerant()
+                    .skip(FlatFileParseException.class)
+                    .skip(SQLDataException.class)
+                    .skipLimit(2)
+                    .retry(SQLDataException.class)
+                    .retryLimit(3)
+				.build();
+	}
+    ```
 
 ### Listener ###
 
+Listener class biasanya digunakan untuk menghandel proses skip & retry dalam faultTolerant dan untuk keperluan interceptor proses tertentu. Pada contoh berikut, listener digunakan untuk modifikasi exit status pada BATCH_STEP_EXECUTION.
+
+    ```
+    @Component
+    public class SkipChekingListener extends StepExecutionListenerSupport{
+
+        @Override
+        public ExitStatus afterStep(StepExecution stepExecution) {
+            String exitCode = stepExecution.getExitStatus().getExitCode();
+            if(!exitCode.equals(ExitStatus.FAILED.getExitCode()) && stepExecution.getSkipCount() > 0) {
+                return new ExitStatus("COMPLETE WITH ERROR");
+            }else {
+                return null;
+            }
+        }
+    }
+    ```
+    
+Penambahan Listener diimplementasi pada inisiasi Step
+
+* Autowired Class SkipChekingListener
+    
+    ```
+    @Autowired public SkipChekingListener skipChekingListener;
+    ```
+
+*  Menambahkan listener pada StepBuilderFactory
+    
+    ```
+    @Bean
+	public Step importPesertaStep() {
+		return stepBuilderFactory.get("step-1")
+				.<Peserta, Peserta>chunk(2)
+				.reader(reader())
+				.processor(processor)
+				.writer(writer)
+                .faultTolerant()
+                    .skip(FlatFileParseException.class)
+                    .skip(SQLDataException.class)
+                    .skipLimit(2)
+                    .retry(SQLDataException.class)
+                    .retryLimit(3)
+                .listener(skipChekingListener)
+				.build();
+	}
+    ```
+
+### Tasklet ####
+
+Tasklet merupakan single proses yang tidak memerlukan reader, processor maupun writer. Contoh sederhana penggunaan Tasklet dapat dengan membuat Class berikut:
+
+* Tasklet untuk Delete file 
+
+    ```
+    @Component
+    public class DeleteFileTasklet implements Tasklet{
+
+        private static final Logger LOG = LoggerFactory.getLogger(DeleteFileTasklet.class);
+
+        @Override
+        public RepeatStatus execute(StepContribution arg0, ChunkContext arg1) throws Exception {
+            File file = new ClassPathResource("test-data.csv").getFile();
+            if (file.delete()) {
+                LOG.info("File {} has been deleted!!!", file.getName());
+            }
+            else {
+                LOG.error("Uneble to delete!!!");
+            }
+            return RepeatStatus.FINISHED;
+        }
+    }
+    ```
+
+* Simpel Tasklet 
+
+    ```
+    public class SampleTasklet implements Tasklet{
+
+        private static final Logger LOG = LoggerFactory.getLogger(SampleTasklet.class);
+
+        @Override
+        public RepeatStatus execute(StepContribution paramStepContribution, ChunkContext paramChunkContext)
+                throws Exception {
+            LOG.info("## Running Tasklet {}", SampleTasklet.class);
+            return null;
+        }
+    }
+    ```
+
+Tasklet dalam implementasi kedalam sebuah StepBuilderFactory dapat dilihat pada contoh berikut
+
+    ```
+    @Bean
+	public Step sampleStep() {
+		return stepBuilderFactory.get("step-4")
+				.tasklet(new SampleTasklet())
+				.build();
+	}
+    ```
+
 ### Paralel Step ###
+
+Step pada suatu Job dapat di jalankan secara sekuensial maupun secara paralel. Untuk menjalankan Step secara paralel, maka pada JobBuilderFactory dibuatkan sebuah `Flow` terlebih dahulu. Untuk penggunaan pada JobBuilderFactory dapat dilihat pada contoh berikut
+
+    ```
+    @Bean
+	public Job importDataPesertaJob() {
+		/* Paralel Flow */
+		Flow flow1 = new FlowBuilder<Flow>("subFlow-1")
+				.from(importPesertaStep())
+				.build();
+		
+		Flow flow2 = new FlowBuilder<Flow>("subFlow-2")
+				.from(sampleStep())
+				.build();
+		
+		return jobBuilderFactory
+				.get("importPesertaJob")
+				.incrementer(new RunIdIncrementer())
+				.flow(importPesertaStep())
+				.split(new SimpleAsyncTaskExecutor())
+				.add(flow1, flow2)
+				.end()
+				.build();
+    }
+    ```
+
+### Run dan Testing ###
+
+Untuk mencoba `faultTolerant`, perlu dicoba modifikasi file peserta.csv misal untuk format tanggal lahir dibuat invalid : 
+
+    ```
+    Name1, Jl. Alamat 1, 1987-05-01
+    Name2, Jl. Alamat 2, 1988-02-04
+    Name3, Jl. Alamat 3, 1990-03-12
+    Name4, Jl. Alamat 4, 07-05-1987   *format disalahkan*
+    Name5, Jl. Alamat 5, 1991-10-11
+    Name6, Jl. Alamat 6, 1991-01-01
+    ```
+    
+Kemudian jalankan kembali aplikasi dan panggil via rest controler dan pantau log, proses Step berjalan secara paralel dan Job Complete dengan Exit Code `COMPLETE WITH ERROR` 
+
+### Selamat Mencoba ###
