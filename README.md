@@ -180,7 +180,7 @@ Roadmap
 
 6. Menyiapkan konfigurasi class untuk menjalankan batch proses membaca file csv dan disimpan kedalam database 
 
-    6.1 Membuat class konfigurasi dengan beberapa instance yang diperlukan
+    Membuat class konfigurasi dengan beberapa instance yang diperlukan
     
     ```java
     @Configuration
@@ -191,7 +191,7 @@ Roadmap
     }
     ```
 
-    6.2 Menyiapkan ItemReader yang bertugas untuk membaca file csv dan melakukan mapping terhadap object entity `Peserta` di dalam class konfigurasi. Untuk kebutuhan demo diperlukan ItemReader yang bertugas membaca file maka telah disediakan oleh spring `FlatFileItemReader`
+    Menyiapkan ItemReader yang bertugas untuk membaca file csv dan melakukan mapping terhadap object entity `Peserta` di dalam class konfigurasi. Untuk kebutuhan demo diperlukan ItemReader yang bertugas membaca file maka telah disediakan oleh spring `FlatFileItemReader`
     
     ```java
     @Bean
@@ -231,7 +231,7 @@ Roadmap
     }
     ```
     
-    6.3 Setelah menyiapkan ItemReader, langkah selanjutnya menyiapkan komponen ItemProcessor dengan implement `org.springframework.batch.item.ItemProcessor`. Contoh ItemProcessor pada demo berikut melakukan proses logic untuk merubah nama peserta menjadi UpperCase
+    Setelah menyiapkan ItemReader, langkah selanjutnya menyiapkan komponen ItemProcessor dengan implement `org.springframework.batch.item.ItemProcessor`. Contoh ItemProcessor pada demo berikut melakukan proses logic untuk merubah nama peserta menjadi UpperCase
     
     ```java
     @Component
@@ -249,7 +249,7 @@ Roadmap
     }
     ```
 
-    6.4 Langkah selanjutnya adalah menyiapkan komponent ItemWriter untuk menyimpan data hasil ItemReader & ItemProcessor dengan implement `org.springframework.batch.item.ItemWriter`
+    Langkah selanjutnya adalah menyiapkan komponent ItemWriter untuk menyimpan data hasil ItemReader & ItemProcessor dengan implement `org.springframework.batch.item.ItemWriter`
     
     ```java
     @Component
@@ -270,14 +270,14 @@ Roadmap
     }
     ```
     
-    6.5 Tambahkan pada class konfigurasi `PesertaBatchConfig` instance dari ItemProcessor dan ItemWriter
+    Tambahkan pada class konfigurasi `PesertaBatchConfig` instance dari ItemProcessor dan ItemWriter
     
     ```java
     @Autowired public PesertaItemProcessor processor;
 	@Autowired public PesertaItemWriter itemWriter;
     ```
     
-    6.6 Tambahkan Step untuk membungkus proses read (FlatFileItemReader), process (ItemProcess) & write (ItemWriter) yang telah dibuat sebelumnya pada class konfigurasi
+    Tambahkan Step untuk membungkus proses read (FlatFileItemReader), process (ItemProcess) & write (ItemWriter) yang telah dibuat sebelumnya pada class konfigurasi
     
     ```java
     @Bean
@@ -291,7 +291,7 @@ Roadmap
 	}
     ```
     
-    6.7 Setelah step ditambahkan, waktunya membuat sebuah Job pada class konfigurasi
+    Setelah step ditambahkan, waktunya membuat sebuah Job pada class konfigurasi
     
     ```java
     @Bean
@@ -305,9 +305,11 @@ Roadmap
 	}
     ```
     
-    6.8 Jalankan aplikasi melalui perintah berikut 
+    Jalankan aplikasi melalui perintah berikut 
     
-    ```mvn spring-boot:run```
+    ```java 
+    mvn spring-boot:run
+    ```
     
 
 ### Kontrol JobExecution & JobLauncher ###
@@ -364,7 +366,7 @@ Pada sesi sebelumnya, job batch akan otomatis start setiap kali menjalankan apli
     Panggil via rest dengan url path `localhost:8080/peserta/process/import`
     
 
-## Fault Tolerant, Listener, Tasklet & Paralel Step ##
+## Fault Tolerant, Listener, Tasklet, Paralel Step & Conditional Flow ##
 
 Pada sesi sebelumnya, telah diimplementasi penggunaan `Step` dan `Job` yang eksekusinya dijalankan secara sequensial dan dalam contoh normal case (tidak terdapat error/exception tertentu). Pada bagian berikut ini, akan diuraikan penggunaan toleransi kesalahan, penggunaan listener dan bagaimana menjalankan Step secara paralel.
 
@@ -415,74 +417,74 @@ public class SkipChekingListener extends StepExecutionListenerSupport{
     
 Penambahan Listener diimplementasi pada inisiasi Step
 
-* Autowired Class SkipChekingListener
+Autowired Class SkipChekingListener
     
-    ```java
-    @Autowired public SkipChekingListener skipChekingListener;
-    ```
+```java
+@Autowired public SkipChekingListener skipChekingListener;
+```
 
-*  Menambahkan listener pada StepBuilderFactory
+Menambahkan listener pada StepBuilderFactory
     
-    ```java
-    @Bean
-	public Step importPesertaStep() {
-		return stepBuilderFactory.get("step-1")
-				.<Peserta, Peserta>chunk(2)
-				.reader(reader())
-				.processor(processor)
-				.writer(writer)
-                .faultTolerant()
-                    .skip(FlatFileParseException.class)
-                    .skipLimit(2)
-                    .retry(FlatFileParseException.class)
-                    .retryLimit(2)
-                .listener(skipChekingListener)
-				.build();
-	}
-    ```
+```java
+@Bean
+public Step importPesertaStep() {
+    return stepBuilderFactory.get("step-1")
+            .<Peserta, Peserta>chunk(2)
+            .reader(reader())
+            .processor(processor)
+            .writer(writer)
+            .faultTolerant()
+                .skip(FlatFileParseException.class)
+                .skipLimit(2)
+                .retry(FlatFileParseException.class)
+                .retryLimit(2)
+            .listener(skipChekingListener)
+            .build();
+}
+```
     
 
 ### Tasklet ####
 
 Tasklet merupakan single proses yang tidak memerlukan reader, processor maupun writer. Contoh sederhana penggunaan Tasklet dapat dengan membuat Class berikut:
 
-* Tasklet untuk Delete file 
+Tasklet untuk Delete file 
 
-    ```java
-    @Component
-    public class DeleteFileTasklet implements Tasklet{
+```java
+@Component
+public class DeleteFileTasklet implements Tasklet{
 
-        private static final Logger LOG = LoggerFactory.getLogger(DeleteFileTasklet.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DeleteFileTasklet.class);
 
-        @Override
-        public RepeatStatus execute(StepContribution arg0, ChunkContext arg1) throws Exception {
-            File file = new ClassPathResource("test-data.csv").getFile();
-            if (file.delete()) {
-                LOG.info("File {} has been deleted!!!", file.getName());
-            }
-            else {
-                LOG.error("Uneble to delete!!!");
-            }
-            return RepeatStatus.FINISHED;
+    @Override
+    public RepeatStatus execute(StepContribution arg0, ChunkContext arg1) throws Exception {
+        File file = new ClassPathResource("test-data.csv").getFile();
+        if (file.delete()) {
+            LOG.info("File {} has been deleted!!!", file.getName());
         }
-    }
-    ```
-
-* Simpel Tasklet 
-
-    ```java
-    public class SampleTasklet implements Tasklet{
-
-        private static final Logger LOG = LoggerFactory.getLogger(SampleTasklet.class);
-
-        @Override
-        public RepeatStatus execute(StepContribution paramStepContribution, ChunkContext paramChunkContext)
-                throws Exception {
-            LOG.info("## Running Tasklet {}", SampleTasklet.class);
-            return null;
+        else {
+            LOG.error("Uneble to delete!!!");
         }
+        return RepeatStatus.FINISHED;
     }
-    ```
+}
+```
+
+Simpel Tasklet 
+
+```java
+public class SampleTasklet implements Tasklet{
+
+    private static final Logger LOG = LoggerFactory.getLogger(SampleTasklet.class);
+
+    @Override
+    public RepeatStatus execute(StepContribution paramStepContribution, ChunkContext paramChunkContext)
+            throws Exception {
+        LOG.info("## Running Tasklet {}", SampleTasklet.class);
+        return null;
+    }
+}
+```
 
 Tasklet dalam implementasi kedalam sebuah StepBuilderFactory dapat dilihat pada contoh berikut
 
@@ -592,4 +594,5 @@ public Step importPesertaStep() {
 ```
 
 
-##   ##
+## Scheduling JobLauncher ##
+
