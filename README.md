@@ -366,7 +366,7 @@ Pada sesi sebelumnya, job batch akan otomatis start setiap kali menjalankan apli
     Panggil via rest dengan url path `localhost:8080/peserta/process/import`
     
 
-## Fault Tolerant, Listener, Tasklet, Paralel Step & Conditional Flow ##
+## Fault Tolerant, Listener, Tasklet, Paralel Step, Trace Error & Conditional Flow ##
 
 Pada sesi sebelumnya, telah diimplementasi penggunaan `Step` dan `Job` yang eksekusinya dijalankan secara sequensial dan dalam contoh normal case (tidak terdapat error/exception tertentu). Pada bagian berikut ini, akan diuraikan penggunaan toleransi kesalahan, penggunaan listener dan bagaimana menjalankan Step secara paralel.
 
@@ -533,22 +533,6 @@ public Job importDataPesertaJob() {
             .build();
 }
 ```
-    
-
-### Run dan Testing ###
-
-Untuk mencoba `faultTolerant`, perlu dicoba modifikasi file peserta.csv misal untuk format tanggal lahir dibuat invalid : 
-
-```csv    
-Name1, Jl. Alamat 1, 1987-05-01
-Name2, Jl. Alamat 2, 1988-02-04
-Name3, Jl. Alamat 3, 1990-03-12
-Name4, Jl. Alamat 4, 07-05-1987   *format disalahkan*
-Name5, Jl. Alamat 5, 1991-10-11
-Name6, Jl. Alamat 6, 1991-01-01
-```    
-    
-Kemudian jalankan kembali aplikasi dan panggil via rest controler dan pantau log, proses Step berjalan secara paralel dan Job Complete dengan Exit Code `COMPLETE WITH ERROR` 
 
 ### Trace Skip Error ###
 
@@ -594,5 +578,110 @@ public Step importPesertaStep() {
 ```
 
 
+### Conditional Flow ###
+
+Conditional Flow dapat diimplementasi sesuai kebutuhan dan berdasarkan bisnis logic dari proses batch. Pada langkah berikut, akan diimplementasikan dengan membuat satu Tasklet Class dan melakukan conditional pada JobBuilderFactory.
+
+Langkah pertama adalah membuat Tasklet Class
+
+```java
+@Component
+public class ConditionalTasklet implements Tasklet{
+
+	private static final Logger LOG = LoggerFactory.getLogger(ConditionalTasklet.class);
+	
+	@Override
+	public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
+		LOG.info("## Menjalankan conditional tasklet {}", ConditionalTasklet.class);
+		return RepeatStatus.FINISHED;
+	}
+}
+```
+
+Berikutnya, membuat `conditionalStep` dan melakukan perubahan pada class konfigurasi batch dengan menambahkan conditional flow sebagai berikut
+
+```java
+/* Conditional Step */
+@Bean
+public Step conditionalStep() {
+    return stepBuilderFactory.get("step-conditional")
+            .tasklet(new ConditionalTasklet())
+            .build();
+}
+
+@Bean
+public Job importDataPesertaJob() {
+
+    /* Paralel Flow *
+    /*Flow flow1 = new FlowBuilder<Flow>("subFlow-1")
+            .from(delete())
+            .build();
+
+    Flow flow2 = new FlowBuilder<Flow>("subFlow-2")
+            .from(sampleStep())
+            .build();
+
+    return jobBuilderFactory
+            .get("importPesertaJob")
+            .incrementer(new RunIdIncrementer())
+            .flow(importPesertaStep())
+            .split(new SimpleAsyncTaskExecutor())
+            .add(flow1, flow2)
+            .end()
+            .build();
+    */
+            
+    return jobBuilderFactory
+            .get("importPesertaJob")
+            .incrementer(new RunIdIncrementer())
+            .flow(importPesertaStep())
+                .on("COMPLETE WITH ERROR") // penambahan kondisi ketika exit code 'COMPLETE WITH ERROR'
+                .to(conditionalStep()) // dilanjutkan ke conditionalStep
+                .next(deleteFileStep())
+            .from(importPesertaStep())
+                .on("*") // semua kondisi yang terpenuhi, selain kondisi sebelumnya
+                .end()
+            .end()
+            .build();
+}
+```
+
+
+
 ## Scheduling JobLauncher ##
 
+Selain menggunakan REST sebagai trigger sebuah job dijalankan, dapat pula menggunakan scheduler untuk pemrosesan batch. Langkah-langkah untuk menjalankan sebuah JobLauncher via scheduler adalah sebagai berikut
+
+1. Pada main class spring boot application, ditambahkan annotasi `@EnableScheduling` 
+
+```java
+@SpringBootApplication
+@EnableBatchProcessing
+@EnableScheduling // Dengan annotasi tersebut, pada clas konfigurasi kita dapat dengan mudah membuat sebuah trigger job secara schedule
+public class SpringbatchDemoApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(SpringbatchDemoApplication.class, args);
+	}
+}
+```
+
+
+2. Pada class konfigurasi batch proses, dibuat sebuah method public dengan annotasi `@Scheduled`. Sebagai contoh, misalnya ingin menjalankan batch Job dengan kurun waktu tertentu (10 detik) maka method nya adalah sebagai berikut
+
+```java
+@Scheduled(cron = "*/10 * * * * *")
+public void performJob() {
+    try {
+        LOG.info("## Job Running at {} ##", new Date());
+        JobParameters jParam = new JobParametersBuilder()
+                .addString("jobId", String.valueOf(System.currentTimeMillis()))
+                .toJobParameters();
+        JobExecution execution = jobLauncher.run(importPesertaJob(), jParam);
+    } catch (Exception e) {
+        LOG.error("Error while execute job {}", e.getMessage());
+    }
+}
+```
+
+3. Jalankan spring boot applicationi dan pantau dalam 10 detik, maka Job `importPesertaJob` akan otomatis dijalankan
