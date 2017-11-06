@@ -77,7 +77,7 @@ Roadmap
 
 1. Pastikan `pom.xml` terdapat dependency berikut
     
-    ```
+    ```java
     <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-batch</artifactId>
@@ -110,7 +110,7 @@ Roadmap
 
 2. `applicatioin.properties` untuk konfigurasi database source, hibernate dll
 
-    ```
+    ```java
     # Setting datasource mysql
     spring.datasource.url=jdbc:mysql://localhost/spring_batch_demo
     spring.datasource.username=root
@@ -128,7 +128,7 @@ Roadmap
 
 1. Pastikan main class spring application telah menggunakan annotation `@EnableBatchProcessing`
 
-    ```
+    ```java
     @SpringBootApplication
     @EnableBatchProcessing
     public class SpringbatchDemoApplication {
@@ -141,7 +141,7 @@ Roadmap
 
 2. Buat Entity misal Peserta
 
-    ```
+    ```java
     @Data @Entity @Table(name="Peserta")
     public class Peserta {
         @Id @GeneratedValue(generator="uuid") @GenericGenerator(name="uuid", strategy="uuid2")
@@ -155,14 +155,14 @@ Roadmap
 
 3. Jalankan aplikasi
 
-    ```
+    ```java
     mvn clean spring-boot:run
     ```
     Cek pada database, tabel Peserta dan entity batch persistance dengan prefix BATCH_*** otomatis akan terbentuk
 
 4. Membuat contoh file *.csv dengan menggunakan delimiter `,` pada classpath project `src/main/resource` misal dengan nama `test-data.csv` dengan beberapa content sebagai berikut:
 
-    ```
+    ```csv
     Name1, Jl. Alamat 1, 1987-05-01
     Name2, Jl. Alamat 2, 1988-02-04
     Name3, Jl. Alamat 3, 1990-03-12
@@ -173,7 +173,7 @@ Roadmap
 
 5. Menyiapkan DAO class untuk entity `Peserta` untuk keperluan persistent database
 
-    ```
+    ```java
     public interface PesertaDao extends PagingAndSortingRepository<Peserta, String>{
     }
     ```
@@ -182,7 +182,7 @@ Roadmap
 
     6.1 Membuat class konfigurasi dengan beberapa instance yang diperlukan
     
-    ```
+    ```java
     @Configuration
     public class PesertaBatchConfig {
         @Autowired public JdbcTemplate jdbcTemplate;
@@ -193,7 +193,7 @@ Roadmap
 
     6.2 Menyiapkan ItemReader yang bertugas untuk membaca file csv dan melakukan mapping terhadap object entity `Peserta` di dalam class konfigurasi. Untuk kebutuhan demo diperlukan ItemReader yang bertugas membaca file maka telah disediakan oleh spring `FlatFileItemReader`
     
-    ```
+    ```java
     @Bean
 	public FlatFileItemReader<Peserta> reader() {
 		FlatFileItemReader<Peserta> reader = new FlatFileItemReader<Peserta>();
@@ -215,7 +215,7 @@ Roadmap
     
     Untuk mapping dari file ke object entity `Peserta` diperlukan metode khusus dengan implement `org.springframework.batch.item.file.mapping.FieldSetMapper`
     
-    ```
+    ```java
     @Component
     public class PesertaMapper implements FieldSetMapper<Peserta>{
 
@@ -233,7 +233,7 @@ Roadmap
     
     6.3 Setelah menyiapkan ItemReader, langkah selanjutnya menyiapkan komponen ItemProcessor dengan implement `org.springframework.batch.item.ItemProcessor`. Contoh ItemProcessor pada demo berikut melakukan proses logic untuk merubah nama peserta menjadi UpperCase
     
-    ```
+    ```java
     @Component
     public class PesertaItemProcessor implements ItemProcessor<Peserta, Peserta>{
         @Override
@@ -251,7 +251,7 @@ Roadmap
 
     6.4 Langkah selanjutnya adalah menyiapkan komponent ItemWriter untuk menyimpan data hasil ItemReader & ItemProcessor dengan implement `org.springframework.batch.item.ItemWriter`
     
-    ```
+    ```java
     @Component
     public class PesertaItemWriter implements ItemWriter<Peserta> {
 
@@ -272,14 +272,14 @@ Roadmap
     
     6.5 Tambahkan pada class konfigurasi `PesertaBatchConfig` instance dari ItemProcessor dan ItemWriter
     
-    ```
+    ```java
     @Autowired public PesertaItemProcessor processor;
 	@Autowired public PesertaItemWriter itemWriter;
     ```
     
     6.6 Tambahkan Step untuk membungkus proses read (FlatFileItemReader), process (ItemProcess) & write (ItemWriter) yang telah dibuat sebelumnya pada class konfigurasi
     
-    ```
+    ```java
     @Bean
 	public Step importPesertaStep() {
 		return stepBuilderFactory.get("step-1")
@@ -293,7 +293,7 @@ Roadmap
     
     6.7 Setelah step ditambahkan, waktunya membuat sebuah Job pada class konfigurasi
     
-    ```
+    ```java
     @Bean
 	public Job importDataPesertaJob() {
 		return jobBuilderFactory
@@ -316,7 +316,7 @@ Pada sesi sebelumnya, job batch akan otomatis start setiap kali menjalankan apli
 
 1. Tambahkan pada file `application.properties`, set `false` enable batch job (nilai default adalah `true`)
 
-    ```
+    ```java
     spring.batch.job.enabled=false
     ```
     
@@ -324,7 +324,7 @@ Pada sesi sebelumnya, job batch akan otomatis start setiap kali menjalankan apli
     
 2. Expose REST via controller class
 
-    ```
+    ```java
     @RestController
     @RequestMapping("/peserta/process")
     public class PesertaController {
@@ -357,7 +357,7 @@ Pada sesi sebelumnya, job batch akan otomatis start setiap kali menjalankan apli
     
 3. Jalankan aplikasi dan coba panggil via rest client untuk menjalankan Job `importDataPesertaJob`
     
-    ```
+    ```java
     mvn spring-boot:run
     ```
     
@@ -373,7 +373,7 @@ Pada sesi sebelumnya, telah diimplementasi penggunaan `Step` dan `Job` yang ekse
 Fault Tolerant biasanya digunakan dalam kondisi suatu proses mengalami kegagalan pada bagian tertentu, sehingga diperlukan mekanisme untuk melanjutkan proses sampai suatu job dinyatakan complete (dengan status COMPLETE atau FAILED). Kegagalan proses dapat diakibatkan oleh beberapa case tertentu, diantaranya format file yang gagal termapping, gagal menyimpan ke database ataupun berdasarkan Exception Class tertentu.
 Untuk mengakomudasinya, dapat diimplementasi `.faultTolerant()` pada deklarasi Step. Dengan implementasi faultTolerant, terdapat 2 proses yang biasanya secara tipical mengikuti faultTolerent yaitu `skip` dan `retry`. Implementasi dapat dilakukan dengan menambahkan beberapa code berikut pada initialisasi Step
 
-    
+    ```java
     @Bean
 	public Step importPesertaStep() {
 		return stepBuilderFactory.get("step-1")
@@ -389,6 +389,7 @@ Untuk mengakomudasinya, dapat diimplementasi `.faultTolerant()` pada deklarasi S
                     .retryLimit(3)
 				.build();
 	}
+    ```
     
 
 ### Listener ###
@@ -432,10 +433,9 @@ Penambahan Listener diimplementasi pada inisiasi Step
 				.writer(writer)
                 .faultTolerant()
                     .skip(FlatFileParseException.class)
-                    .skip(SQLDataException.class)
                     .skipLimit(2)
-                    .retry(SQLDataException.class)
-                    .retryLimit(3)
+                    .retry(FlatFileParseException.class)
+                    .retryLimit(2)
                 .listener(skipChekingListener)
 				.build();
 	}
@@ -489,23 +489,29 @@ Tasklet dalam implementasi kedalam sebuah StepBuilderFactory dapat dilihat pada 
     
     @Bean
 	public Step sampleStep() {
-		return stepBuilderFactory.get("step-4")
+		return stepBuilderFactory.get("step-sample")
 				.tasklet(new SampleTasklet())
 				.build();
 	}
     
+    @Bean
+	public Step delete() {
+		return stepBuilderFactory.get("step-delete")
+				.tasklet(new DeleteFileTasklet())
+				.build();
+	}
 
 
 ### Paralel Step ###
 
-Step pada suatu Job dapat di jalankan secara sekuensial maupun secara paralel. Untuk menjalankan Step secara paralel, maka pada JobBuilderFactory dibuatkan sebuah `Flow` terlebih dahulu. Untuk penggunaan pada JobBuilderFactory dapat dilihat pada contoh berikut
+Step pada suatu Job dapat di jalankan secara sekuensial maupun secara paralel. Untuk menjalankan Step secara paralel, maka pada JobBuilderFactory dibuatkan sebuah `Flow` terlebih dahulu. Pada JobBuilderFactory, perlu menambahkan method `split` untuk menjalankan paralel Task. Untuk penggunaan pada JobBuilderFactory dapat dilihat pada contoh berikut
 
     
     @Bean
 	public Job importDataPesertaJob() {
 		/* Paralel Flow */
 		Flow flow1 = new FlowBuilder<Flow>("subFlow-1")
-				.from(importPesertaStep())
+				.from(delete())
 				.build();
 		
 		Flow flow2 = new FlowBuilder<Flow>("subFlow-2")
@@ -538,5 +544,42 @@ Untuk mencoba `faultTolerant`, perlu dicoba modifikasi file peserta.csv misal un
     
 Kemudian jalankan kembali aplikasi dan panggil via rest controler dan pantau log, proses Step berjalan secara paralel dan Job Complete dengan Exit Code `COMPLETE WITH ERROR` 
 
+### Trace Skip Error ###
 
-##  ##
+Untuk mengetahui error skip berada pada jumlah proses keberapa, dapat diintercept menggunakan `org.springframework.batch.core.annotation.OnReadError`. Cara sederhananya, membuat satu class baru dan Overide annotation `@OnReadError`.
+
+    @Component
+    public class CustomSkipListener {
+
+        private static final Logger LOG = LoggerFactory.getLogger(CustomSkipListener.class);
+
+        @OnReadError
+        public void onReadError(Exception e) {
+            LOG.error("INTERCEPTOR KETIKA ADA YANG ERROR {}", e);
+        }
+    }
+    
+Pada konfigurasi batch proses ditambahkan listener saat inisiasi Step dengan autowired class CustomSkipListener diatas
+
+    @Autowired public CustomSkipListener customSkipListener;
+    
+    @Bean
+	public Step importPesertaStep() {
+		return stepBuilderFactory.get("step-1")
+				.<Peserta, Peserta>chunk(2)
+				.reader(reader())
+				.processor(processor)
+				.writer(writer)
+				.faultTolerant()
+					.skip(FlatFileParseException.class)
+					.skip(SQLDataException.class)
+					.skipLimit(2)
+					.retry(FlatFileParseException.class)
+					.retryLimit(2)
+				.listener(skipCheckingListener)
+				.listener(customSkipListener)
+				.build();
+	}
+
+
+##   ##
