@@ -646,42 +646,5 @@ public Job importDataPesertaJob() {
 }
 ```
 
+Penambahan kondisi pada job diatas menggunakan pattern berdasarkan exit status (secara default jika diset `"*"` artinya setiap flow yang memenuhi exit status `COMPLETE`)
 
-
-## Scheduling JobLauncher ##
-
-Selain menggunakan REST sebagai trigger sebuah job dijalankan, dapat pula menggunakan scheduler untuk pemrosesan batch. Langkah-langkah untuk menjalankan sebuah JobLauncher via scheduler adalah sebagai berikut
-
-1. Pada main class spring boot application, ditambahkan annotasi `@EnableScheduling` 
-
-```java
-@SpringBootApplication
-@EnableBatchProcessing
-@EnableScheduling // Dengan annotasi tersebut, pada clas konfigurasi kita dapat dengan mudah membuat sebuah trigger job secara schedule
-public class SpringbatchDemoApplication {
-
-	public static void main(String[] args) {
-		SpringApplication.run(SpringbatchDemoApplication.class, args);
-	}
-}
-```
-
-
-2. Pada class konfigurasi batch proses, dibuat sebuah method public dengan annotasi `@Scheduled`. Sebagai contoh, misalnya ingin menjalankan batch Job dengan kurun waktu tertentu (10 detik) maka method nya adalah sebagai berikut
-
-```java
-@Scheduled(cron = "*/10 * * * * *")
-public void performJob() {
-    try {
-        LOG.info("## Job Running at {} ##", new Date());
-        JobParameters jParam = new JobParametersBuilder()
-                .addString("jobId", String.valueOf(System.currentTimeMillis()))
-                .toJobParameters();
-        JobExecution execution = jobLauncher.run(importPesertaJob(), jParam);
-    } catch (Exception e) {
-        LOG.error("Error while execute job {}", e.getMessage());
-    }
-}
-```
-
-3. Jalankan spring boot applicationi dan pantau dalam 10 detik, maka Job `importPesertaJob` akan otomatis dijalankan
