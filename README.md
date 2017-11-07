@@ -699,3 +699,6 @@ Selain menggunakan REST sebagai trigger sebuah job dijalankan, dapat pula menggu
     Cron expression dapat digenerate secara online melalui tautan berikut: [cronmaker] (http://www.cronmaker.com/)
 
 3. Jalankan spring boot application dan pantau dalam 1 menit, maka Job `importPesertaJob` akan otomatis dijalankan
+
+
+#### Selamat Mencoba... ####
