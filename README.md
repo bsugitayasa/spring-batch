@@ -158,7 +158,7 @@ Roadmap
     ```java
     mvn clean spring-boot:run
     ```
-    Cek pada database, tabel Peserta dan entity batch persistance dengan prefix BATCH_*** otomatis akan terbentuk
+    Cek pada database, tabel Peserta dan entity batch dengan prefix BATCH_*** otomatis akan terbentuk
 
 4. Membuat contoh file *.csv dengan menggunakan delimiter `,` pada classpath project `src/main/resource` misal dengan nama `test-data.csv` dengan beberapa content sebagai berikut:
 
@@ -396,7 +396,7 @@ public Step importPesertaStep() {
 
 ### Listener ###
 
-Listener class biasanya digunakan untuk menghandel proses skip & retry dalam faultTolerant dan untuk keperluan interceptor proses tertentu. Pada contoh berikut, listener digunakan untuk modifikasi exit status pada BATCH_STEP_EXECUTION.
+Listener class biasanya digunakan untuk menghandel proses skip & retry dalam faultTolerant dan untuk keperluan interceptor proses tertentu. Pada contoh berikut, listener digunakan untuk modifikasi exit status pada table BATCH_STEP_EXECUTION.
 
 ```java
 @Component
