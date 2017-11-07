@@ -536,7 +536,7 @@ public Job importDataPesertaJob() {
 
 ### Trace Skip Error ###
 
-Untuk mengetahui error skip berada pada jumlah proses keberapa, dapat diintercept menggunakan `org.springframework.batch.core.annotation.OnReadError`. Cara sederhananya, membuat satu class baru dan Overide annotation `@OnReadError`.
+Untuk mengetahui error skip berada pada jumlah proses keberapa, dapat diintercept menggunakan `org.springframework.batch.core.annotation.OnReadError`. Cara sederhananya, membuat satu class baru dan Overide annotation `@OnReadError` atau `@OnSkipInRead` untuk mengetahui file dan line yang terlewati.
 
 ```java
 @Component
@@ -544,6 +544,11 @@ public class CustomSkipListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(CustomSkipListener.class);
 
+    @OnSkipInRead
+	public void onSkipInRead(Throwable t) {
+		LOG.error("INTERPT ON SKIP IN READER : {}", t.getMessage());
+	}
+    
     @OnReadError
     public void onReadError(Exception e) {
         LOG.error("INTERCEPTOR KETIKA ADA YANG ERROR {}", e);
@@ -648,3 +653,49 @@ public Job importDataPesertaJob() {
 
 Penambahan kondisi pada job diatas menggunakan pattern berdasarkan exit status (secara default jika diset `"*"` artinya setiap flow yang memenuhi exit status `COMPLETE`)
 
+## Scheduling JobLauncher ##
+
+Selain menggunakan REST sebagai trigger sebuah job dijalankan, dapat pula menggunakan scheduler untuk pemrosesan batch. Langkah-langkah untuk menjalankan sebuah JobLauncher via scheduler adalah sebagai berikut
+
+1. Pada main class spring boot application, ditambahkan annotasi `@EnableScheduling` 
+
+    ```java
+    @SpringBootApplication
+    @EnableBatchProcessing
+    @EnableScheduling // Dengan annotasi tersebut, pada clas konfigurasi kita dapat dengan mudah membuat sebuah trigger job secara schedule
+    public class SpringbatchDemoApplication {
+
+        public static void main(String[] args) {
+            SpringApplication.run(SpringbatchDemoApplication.class, args);
+        }
+    }
+    ```
+
+
+2. Pada class konfigurasi batch proses, dibuat sebuah method public dengan annotasi `@Scheduled`. Sebagai contoh, misalnya ingin menjalankan batch Job dengan kurun waktu tertentu (1 menit) maka method nya adalah sebagai berikut
+
+    Autowired jobLauncher terlebih dahulu
+    ```java
+    @Autowired public JobLauncher jobLauncher;
+    ```
+    
+    Kemudian membuat method dengan annotasi `@Scheduled` dengan cron expression. 
+
+    ```java
+    @Scheduled(cron = "*/10 * * * * *")
+    public void performJob() {
+        try {
+            LOG.info("## Job Running at {} ##", new Date());
+            JobParameters jParam = new JobParametersBuilder()
+                    .addString("jobId", String.valueOf(System.currentTimeMillis()))
+                    .toJobParameters();
+            JobExecution execution = jobLauncher.run(importPesertaJob(), jParam);
+        } catch (Exception e) {
+            LOG.error("Error while execute job {}", e.getMessage());
+        }
+    }
+    ```
+
+    Cron expression dapat digenerate secara online melalui tautan berikut: [cronmaker] (http://www.cronmaker.com/)
+
+3. Jalankan spring boot application dan pantau dalam 1 menit, maka Job `importPesertaJob` akan otomatis dijalankan
